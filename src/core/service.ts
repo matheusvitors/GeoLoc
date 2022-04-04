@@ -36,6 +36,15 @@ export const Service = {
         } catch (error) {
 			return Promise.reject(error);
         }
+    },
+
+    apagarDatabase: async ()  => {
+        try {
+            await api.delete('/database');
+
+        } catch (error) {
+			return Promise.reject(error);
+        }
     }
 
 
