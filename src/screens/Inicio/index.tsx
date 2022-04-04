@@ -6,6 +6,8 @@ import { GeolocationService, INTERVAL } from '../../core/geolocation';
 import { JUSTICA, PARIS } from '../../core/locations';
 import { Service } from '../../core/service';
 
+import BackgroundService from 'react-native-background-actions';
+
 import {ButtonInit, Container, FooterContent, HeaderContent, MessageBox, Texto} from './styles';
 
 const Inicio = () => {
@@ -20,10 +22,16 @@ const Inicio = () => {
 		pegarPosicaoInicial();
 	}, [])
 
-	useEffect(() => {
-		intervalTracking();
-	}, [posicao, rastrear]);
+	// useEffect(() => {
+	// 	intervalTracking();
+	// }, [posicao, rastrear]);
 
+	//TODO: Forçar segundo plano
+	//TODO: Listar as chamadas e identificar quais foram enviadas
+	//TODO: Pegar matricula de quem ta usando
+	//TODO: Opção de rastrear usando o follow
+	//TODO: Indicar visualmente no message box se a coordenada foi enviadas ou não
+	//TODO: Melhoria do botão de acordar a api
 
 	const pegarPosicaoInicial = async () => {
 
@@ -48,26 +56,28 @@ const Inicio = () => {
 	}
 
 	const pegarPosicao = async () => {
+		
 		try {
 			const pos = await GeolocationService.currentPosition();
 			setPosicao(pos);
 			const data = new Date().toLocaleTimeString();
 			// const numero = Math.floor(Math.random() * (10 - 1 + 1)) + 1;
 			setBoxMessage(data + JSON.stringify(pos));
+
+			console.log('[rota em pegar posicao]:', rota);
 			
 			const coord = { 
 				latitude: pos.latitude,
 				longitude: pos.longitude,
 				timestamp: Date.now(),
-				rota
+				rota: rota
 			}
 
-			console.log('coord', coord);
+			console.log('[coord]', coord);
 
 			if(rota) {
 				await Service.novaCoordenada(coord);
 			}
-			
 
 		} catch (error) {
 			console.log(error);
@@ -75,16 +85,58 @@ const Inicio = () => {
 		}
 	}
 
-	const intervalTracking = async () => {
+	// const intervalTracking = async () => {
 
-		console.log("Interval Tracking", rastrear);
+	// 	console.log("Interval Tracking", rastrear);
 
-		if(rastrear) { 
-			setTimeout(() => {
+	// 	if(rastrear) { 
+	// 		setTimeout(() => {
+	// 			pegarPosicao();
+	// 		}, INTERVAL)
+	// 	}
+	// }
+
+	// const teste = async () => {
+	// 	const sleep = (time: any) => new Promise((resolve) => setTimeout(() => resolve('ok'), time));
+	// 	await new Promise( async (resolve) => {
+	// 		for (let i = 0; BackgroundService.isRunning(); i++) {
+	// 			console.log(i);
+	// 			await sleep(1000);
+	// 		}
+	// 	});		
+	// }
+
+	const testLocalizacao = async () => {
+		const sleep = (time: any) => new Promise((resolve) => setTimeout(() => resolve('ok'), time));
+		await new Promise(async (resolve) => {
+			while(BackgroundService.isRunning()) {				
 				pegarPosicao();
-			}, INTERVAL)
-		}
+				await sleep(INTERVAL);
+			}
+		});
 	}
+
+	const runOnBackground = async () => {
+		const options = {
+			taskName: 'Geoloc',
+			taskTitle: 'O dispositivo está sendo rastreado',
+			taskDesc: ' ', 
+			taskIcon: {
+				name: 'ic_launcher',
+				type: 'mipmap',
+			}
+		}
+		
+		try {
+			console.log('Running on background');
+
+			await BackgroundService.start(testLocalizacao, options); 
+			// await BackgroundService.updateNotification({taskDesc: 'O dispositivo está sendo rastreado'});	
+		} catch (error) {
+			console.log(error);
+			
+		}
+	}	
 
 	const gerenciarRota = async () => {
 		try {
@@ -92,17 +144,18 @@ const Inicio = () => {
 			// GeolocationService.stopToFollow(watchId) :
 			// setWatchId(GeolocationService.follow());
 
-			intervalTracking();
-
+			// intervalTracking();
 			setRastrear(!rastrear);
 
 			if(rota) {
 				setRota(null);
+				await BackgroundService.stop();
 			} else {
+				separador();
 				const { data } = await Service.novaRota();
 				setRota(data.rota.id);	
+				runOnBackground();
 			}
-			
 			
 		} catch (error) {
 			console.log(error);
@@ -119,9 +172,25 @@ const Inicio = () => {
 		}
 	}
 
-	useEffect(() => {
-		console.log('[POSICAO]:', posicao);
-	}, [posicao]);
+	const deletarDatabase = async () => { 
+		try {
+			await Service.apagarDatabase();
+			setBoxMessage('Database Apagada')
+		} catch (error) {
+			setBoxMessage(error.message);
+			console.log(error);
+		}
+	}
+
+	const separador = () => {
+		console.log('------------------------------------------------------');
+		console.log('------------------------ NOVA ROTA -------------------');
+		console.log('------------------------------------------------------');
+	}
+
+	// useEffect(() => {
+	// 	console.log('[POSICAO]:', posicao);
+	// }, [posicao]);
 
 	useEffect(() => {
 		console.log('[ROTA]:', rota);
@@ -147,26 +216,11 @@ const Inicio = () => {
 				showsUserLocation={true}
 				followsUserLocation={true}
 				>
-				
-				{/* {posicao ? 
-					<Marker
-						coordinate={posicao}
-						title={'Eu'}
-						description={'Minha Posição atual'}>
-						<View
-							style={{
-								backgroundColor: '#009dff',
-								padding: 10,
-								width: 10,
-								height: 10,
-								borderRadius: 10,
-							}} />
-					</Marker> 
-				: null} */}
-				
+
 			</MapView> : null }
 			<HeaderContent>
 				<Button label="API" width='12%' onPress={acordarAPI} />
+				<Button label="Apagar Dados" width='30%' onPress={deletarDatabase} />
 			</HeaderContent>
 
 			<FooterContent>

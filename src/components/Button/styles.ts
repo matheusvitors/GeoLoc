@@ -17,6 +17,10 @@ export const Container = styled.TouchableOpacity<{bgColor: string; width: string
 `;
 
 export const Label = styled.Text<{textColor: string}>`   
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
     color: ${props => props.textColor};
     font-size: 18px;
     font-weight: bold;
