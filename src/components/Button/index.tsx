@@ -4,7 +4,7 @@ import { ThemeContext } from 'styled-components';
 import { Container, Label } from './styles';
 
 interface IButtonProps { 
-    label: string;
+    label: string | Element;
     onPress(): any;
     type?: string;
     isDisabled?: boolean;
@@ -15,8 +15,8 @@ const Button: React.FC<IButtonProps> = ({ label, type, width, onPress, isDisable
 
     const theme = useContext(ThemeContext);
     
-    let bgColor = '#4432a8';
-    let textColor = '#d1d1d1';
+    let bgColor = '#141414';
+    let textColor = '#e67700';
 
     switch (type) {
         case 'accent':
@@ -33,8 +33,8 @@ const Button: React.FC<IButtonProps> = ({ label, type, width, onPress, isDisable
             break;
 
         default:
-            bgColor = '#4432a8';
-            textColor = '#d1d1d1';
+            bgColor = '#141414';
+            textColor = '#e67700';
             break;
     }
 

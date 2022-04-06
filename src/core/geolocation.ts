@@ -39,15 +39,27 @@ export const GeolocationService = {
         }        
     }),
 
-    follow: () => {
+    follow: (success: (pos: any) => void, error: (error: any) => void) => {
         const watchId = Geolocation.watchPosition(
-            (pos)=> { console.log('[Seguindo]: ', pos)}, 
-            (error) => { console.log('[ERROR]:', error) },
+            success, error,
             {enableHighAccuracy: false, timeout: 5000, maximumAge: 0}
         ); 
 
         return watchId;
     },
+    // follow: () => {
+    //     const watchId = Geolocation.watchPosition(
+    //         (pos)=> { console.log('[Seguindo]: ', pos)}, 
+    //         (error) => { console.log('[ERROR]:', error) },
+    //         {enableHighAccuracy: false, timeout: 5000, maximumAge: 0}
+    //     ); 
+
+    //     return watchId;
+    // },
+
+    // follow2: () => new Promise((resolve, reject) => {
+
+    // }),
 
     stopToFollow: (watchId: number) => {
         Geolocation.clearWatch(watchId);
