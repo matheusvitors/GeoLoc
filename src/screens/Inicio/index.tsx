@@ -5,18 +5,27 @@ import Button from '../../components/Button';
 import { GeolocationService, INTERVAL } from '../../core/geolocation';
 import { JUSTICA, PARIS } from '../../core/locations';
 import { Service } from '../../core/service';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import PJ from '../../../package.json';
 
 import BackgroundService from 'react-native-background-actions';
 
-import {ButtonInit, Container, FooterContent, HeaderContent, MessageBox, Texto} from './styles';
+import {ButtonInit, Container, ContainerRota, FooterContent, HeaderContent, MessageBox, TextRota, Texto, IconContainer} from './styles';
+
+import { LogBox } from 'react-native';
+LogBox.ignoreLogs(['new NativeEventEmitter']); // Ignore log notification by message
+LogBox.ignoreAllLogs(); //Ignore all log notifications
 
 const Inicio = () => {
 
 	const [rota, setRota] = useState(null); 
 	const [posicao, setPosicao] = useState<any>(JUSTICA);
 	const [rastrear, setRastrear] = useState(false);
+	const [seguir, setSeguir] = useState(false);
 	const [watchId, setWatchId] = useState(0)
-	const [boxMessage, setBoxMessage] = useState("Message Box")
+	const [boxMessage, setBoxMessage] = useState('Geoloc - ' + PJ.version)
+
+	const [coords, setCoords] = useState<any>(null);
 
 	useEffect(() => {
 		pegarPosicaoInicial();
@@ -26,10 +35,9 @@ const Inicio = () => {
 	// 	intervalTracking();
 	// }, [posicao, rastrear]);
 
-	//TODO: Forçar segundo plano
+	//TODO: Opção de rastrear usando o follow
 	//TODO: Listar as chamadas e identificar quais foram enviadas
 	//TODO: Pegar matricula de quem ta usando
-	//TODO: Opção de rastrear usando o follow
 	//TODO: Indicar visualmente no message box se a coordenada foi enviadas ou não
 	//TODO: Melhoria do botão de acordar a api
 
@@ -55,59 +63,72 @@ const Inicio = () => {
 		}
 	}
 
+	const salvarPosicao = async (lat: number, long: number) => {
+
+		const coord = { 
+			latitude: lat,
+			longitude: long,
+			timestamp: Date.now(),
+			rota: rota
+		}
+
+		console.log('[coord p/ salvar]', coord);
+		setCoords(coord);
+
+		if(rota) {
+			await Service.novaCoordenada(coord);
+		}
+
+	}
+
 	const pegarPosicao = async () => {
 		
 		try {
 			const pos = await GeolocationService.currentPosition();
-			setPosicao(pos);
 			const data = new Date().toLocaleTimeString();
-			// const numero = Math.floor(Math.random() * (10 - 1 + 1)) + 1;
+
+			setPosicao(pos);
 			setBoxMessage(data + JSON.stringify(pos));
 
-			console.log('[rota em pegar posicao]:', rota);
-			
-			const coord = { 
-				latitude: pos.latitude,
-				longitude: pos.longitude,
-				timestamp: Date.now(),
-				rota: rota
-			}
+			salvarPosicao(pos.latitude, pos.longitude);
 
-			console.log('[coord]', coord);
-
-			if(rota) {
-				await Service.novaCoordenada(coord);
-			}
 
 		} catch (error) {
 			console.log(error);
 			setBoxMessage(error.message)
 		}
 	}
+	
+	const seguirPosicao = async () => { 
+		console.log('seguindo');
 
-	// const intervalTracking = async () => {
+		const success = (pos: any)=> { 
+			const posicao = { latitude: pos.coords.latitude , longitude: pos.coords.longitude}
+			console.log('[Seguindo]: ', posicao);
+			salvarPosicao(posicao.latitude, posicao.longitude)
+		}
+		
+		const errorCb = (error: any) => { 
+			console.log('[ERROR]:', error)
+			setBoxMessage(error.message)
+		}
 
-	// 	console.log("Interval Tracking", rastrear);
+		try {
+			if(!watchId){
+				// setWatchId(GeolocationService.follow(success, errorCb));
+				setWatchId(GeolocationService.follow(success, errorCb));
+			}
 
-	// 	if(rastrear) { 
-	// 		setTimeout(() => {
-	// 			pegarPosicao();
-	// 		}, INTERVAL)
-	// 	}
-	// }
+		} catch (error) {
+			console.log(error);
+		}
+		
+	}
 
-	// const teste = async () => {
-	// 	const sleep = (time: any) => new Promise((resolve) => setTimeout(() => resolve('ok'), time));
-	// 	await new Promise( async (resolve) => {
-	// 		for (let i = 0; BackgroundService.isRunning(); i++) {
-	// 			console.log(i);
-	// 			await sleep(1000);
-	// 		}
-	// 	});		
-	// }
+	const intervalTracking = async () => {
 
-	const testLocalizacao = async () => {
 		const sleep = (time: any) => new Promise((resolve) => setTimeout(() => resolve('ok'), time));
+		
 		await new Promise(async (resolve) => {
 			while(BackgroundService.isRunning()) {				
 				pegarPosicao();
@@ -116,7 +137,14 @@ const Inicio = () => {
 		});
 	}
 
-	const runOnBackground = async () => {
+	const followTracking = async () => {
+
+		if(!watchId){
+			seguirPosicao();
+		}
+	}
+
+	const runInBackground = async (callback: () => Promise<void>) => {
 		const options = {
 			taskName: 'Geoloc',
 			taskTitle: 'O dispositivo está sendo rastreado',
@@ -130,21 +158,17 @@ const Inicio = () => {
 		try {
 			console.log('Running on background');
 
-			await BackgroundService.start(testLocalizacao, options); 
+			await BackgroundService.start(callback, options); 
 			// await BackgroundService.updateNotification({taskDesc: 'O dispositivo está sendo rastreado'});	
 		} catch (error) {
 			console.log(error);
 			
 		}
-	}	
-
-	const gerenciarRota = async () => {
+	}
+	
+	const rastrearUsuario = async () => {
+		
 		try {
-			// rastrear ? 
-			// GeolocationService.stopToFollow(watchId) :
-			// setWatchId(GeolocationService.follow());
-
-			// intervalTracking();
 			setRastrear(!rastrear);
 
 			if(rota) {
@@ -154,12 +178,36 @@ const Inicio = () => {
 				separador();
 				const { data } = await Service.novaRota();
 				setRota(data.rota.id);	
-				runOnBackground();
 			}
 			
 		} catch (error) {
 			console.log(error);
+			setBoxMessage(error.message)
 		}
+	}
+
+	const seguirUsuario = async () => {
+
+		try {
+			setSeguir(!seguir);
+
+			if(rota){
+				setRota(null);
+				GeolocationService.stopToFollow(watchId);
+				setWatchId(0);
+				await BackgroundService.stop();
+			} else {
+				separador();
+				const { data } = await Service.novaRota();
+				setRota(data.rota.id);	
+				// seguirPosicao();
+			}
+
+		} catch (error) {
+			console.log(error);
+			setBoxMessage(error.message)
+		}
+
 	}
 
 	const acordarAPI = async () => { 
@@ -194,6 +242,16 @@ const Inicio = () => {
 
 	useEffect(() => {
 		console.log('[ROTA]:', rota);
+		if(rota) {
+			if(rastrear) {
+				runInBackground(intervalTracking)
+			}
+			if(seguir) {
+				runInBackground(followTracking)
+
+				// runInBackground(seguirPosicao)
+			}
+		}
 	}, [rota]);
 
 	useEffect(() => {
@@ -201,8 +259,23 @@ const Inicio = () => {
 	}, [rastrear]);
 
 	useEffect(() => {
+		console.log('[Seguir]:', seguir);
+	}, [seguir]);
+
+	useEffect(() => {
 		console.log('[WATCHID]:', watchId);
 	}, [watchId]);
+
+	const ShowItem: React.FC<{item: any, icon?: any}> = ({ item, icon }) => {
+		return (
+			<ContainerRota>
+				{icon ?<IconContainer>
+					<Icon name={icon} size={25} /> 
+				</IconContainer>: null }
+				<TextRota>{item ? item : '0'}</TextRota>
+			</ContainerRota> 
+		)
+	}
 
 	return (
 		<Container>
@@ -219,13 +292,18 @@ const Inicio = () => {
 
 			</MapView> : null }
 			<HeaderContent>
-				<Button label="API" width='12%' onPress={acordarAPI} />
-				<Button label="Apagar Dados" width='30%' onPress={deletarDatabase} />
+				{rastrear ? <ShowItem item={rota} icon="alt-route" /> : null }
+				{seguir ? <ShowItem item={watchId} icon="follow-the-signs" /> : null }
+				<Button label={<Icon name="power-settings-new" size={30} ></Icon>} 
+					width='12%' onPress={acordarAPI} />
+				<Button label={<Icon name="delete" size={30} ></Icon>} 
+					width='12%' onPress={deletarDatabase} />
 			</HeaderContent>
 
 			<FooterContent>
-				<Button label={rastrear ? "Parar" : "Iniciar"} width='30%' onPress={gerenciarRota} />
+				<Button label={rastrear ? "Parar" : "Iniciar"} isDisabled={ seguir ? true : false } width='30%' onPress={rastrearUsuario} />
 				<Button label="Pegar Posição" width='40%' onPress={pegarPosicao} />
+				<Button label={seguir ? "Parar" : "Me Seguir"} isDisabled={ rastrear ? true : false } width='30%' onPress={seguirUsuario} />
 
 				{/* <Button label="1s" width='15%' onPress={() => {}} />
 				<Button label="10s" width='15%' onPress={() => {}} />
