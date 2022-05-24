@@ -1,4 +1,6 @@
 import api from "./api";
+import { useHeaders } from "../hooks";
+
 
 export const Service = {
 
@@ -10,9 +12,19 @@ export const Service = {
         }
     },
 
-    novaRota: async () => {
+    login: async (credenciais: any) => {
         try {
-            const response = await api.post('/rotas', {});
+            const response = await api.post('/auth', credenciais);
+            return response;
+        } catch (error) {            
+			return Promise.reject(error);
+        }
+    },
+
+    novaRota: async (id: string) => {
+
+        try {
+            const response = await api.post('/rotas', {usuarioId: id});
             return response;
         } catch (error) {
 			return Promise.reject(error);

@@ -1,17 +1,18 @@
 import styled from 'styled-components/native';
 
-export const Container = styled.TouchableOpacity<{bgColor: string; width: string}>`
+export const Container = styled.TouchableOpacity<{bgColor: string; width: string, height: string}>`
     display: flex;
     align-items: center;
     justify-content: center;
 
     width: ${props => props.width} ;
-    height: 40px;
+    height: ${props => props.height} ;
+    /* height: 40px; */
     margin-top: 30px;
     margin-left: 5px;
 
     background-color: ${props => props.bgColor};
-    border-radius: 5px;
+    border-radius: 10px;
 
     opacity: ${props => props.disabled ? 0.8 : 1};
 
@@ -26,4 +27,21 @@ export const Label = styled.Text<{textColor: string}>`
     font-size: 16px;
     font-weight: bold;
     text-transform: uppercase;
+`;
+
+// Loading 
+export const LoadingContainer = styled.View<{bgColor: string; width: string, height: string}>`
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: ${props => props.width} ;
+    height: ${props => props.height} ;
+    /* height: 40px; */
+    margin-top: 30px;
+    margin-left: 5px;
+
+    background-color: ${props => props.bgColor};
+    border-radius: 10px;
+
 `;
