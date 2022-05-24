@@ -10,9 +10,11 @@ import PJ from '../../../package.json';
 
 import BackgroundService from 'react-native-background-actions';
 
-import {ButtonInit, Container, ContainerRota, FooterContent, HeaderContent, MessageBox, TextRota, Texto, IconContainer} from './styles';
+import { Container, ContainerRota, FooterContent, HeaderContent, MessageBox, TextRota, Texto, IconContainer} from './styles';
 
 import { LogBox } from 'react-native';
+import useId from '../../hooks/useId';
+
 LogBox.ignoreLogs(['new NativeEventEmitter']); // Ignore log notification by message
 LogBox.ignoreAllLogs(); //Ignore all log notifications
 
@@ -23,23 +25,19 @@ const Inicio = () => {
 	const [rastrear, setRastrear] = useState(false);
 	const [seguir, setSeguir] = useState(false);
 	const [watchId, setWatchId] = useState(0)
-	const [boxMessage, setBoxMessage] = useState('Geoloc - ' + PJ.version)
+	const [boxMessage, setBoxMessage] = useState('Geoloc - ' + PJ.version);
+
 
 	const [coords, setCoords] = useState<any>(null);
+
 
 	useEffect(() => {
 		pegarPosicaoInicial();
 	}, [])
 
-	// useEffect(() => {
-	// 	intervalTracking();
-	// }, [posicao, rastrear]);
-
-	//TODO: Opção de rastrear usando o follow
 	//TODO: Listar as chamadas e identificar quais foram enviadas
 	//TODO: Pegar matricula de quem ta usando
 	//TODO: Indicar visualmente no message box se a coordenada foi enviadas ou não
-	//TODO: Melhoria do botão de acordar a api
 
 	const pegarPosicaoInicial = async () => {
 
@@ -167,6 +165,8 @@ const Inicio = () => {
 	}
 	
 	const rastrearUsuario = async () => {
+
+		const usuarioId = await useId();
 		
 		try {
 			setRastrear(!rastrear);
@@ -175,18 +175,22 @@ const Inicio = () => {
 				setRota(null);
 				await BackgroundService.stop();
 			} else {
-				separador();
-				const { data } = await Service.novaRota();
+				const { data } = await Service.novaRota(usuarioId ? usuarioId : '');
 				setRota(data.rota.id);	
+				separador();
 			}
 			
 		} catch (error) {
+			setRastrear(false);
 			console.log(error);
 			setBoxMessage(error.message)
 		}
 	}
 
 	const seguirUsuario = async () => {
+
+		const usuarioId = await useId();
+
 
 		try {
 			setSeguir(!seguir);
@@ -198,12 +202,14 @@ const Inicio = () => {
 				await BackgroundService.stop();
 			} else {
 				separador();
-				const { data } = await Service.novaRota();
+				const { data } = await Service.novaRota(usuarioId ? usuarioId : '');
+				console.log(data);
 				setRota(data.rota.id);	
 				// seguirPosicao();
 			}
 
 		} catch (error) {
+			setSeguir(false);
 			console.log(error);
 			setBoxMessage(error.message)
 		}
@@ -293,21 +299,17 @@ const Inicio = () => {
 			</MapView> : null }
 			<HeaderContent>
 				{rastrear ? <ShowItem item={rota} icon="alt-route" /> : null }
-				{seguir ? <ShowItem item={watchId} icon="follow-the-signs" /> : null }
-				<Button label={<Icon name="power-settings-new" size={30} ></Icon>} 
+				{seguir ? <ShowItem item={rota} icon="follow-the-signs" /> : null }
+				{/* <Button label={<Icon name="power-settings-new" size={30} ></Icon>} 
 					width='12%' onPress={acordarAPI} />
 				<Button label={<Icon name="delete" size={30} ></Icon>} 
-					width='12%' onPress={deletarDatabase} />
+					width='12%' onPress={deletarDatabase} /> */}
 			</HeaderContent>
 
 			<FooterContent>
 				<Button label={rastrear ? "Parar" : "Iniciar"} isDisabled={ seguir ? true : false } width='30%' onPress={rastrearUsuario} />
 				<Button label="Pegar Posição" width='40%' onPress={pegarPosicao} />
 				<Button label={seguir ? "Parar" : "Me Seguir"} isDisabled={ rastrear ? true : false } width='30%' onPress={seguirUsuario} />
-
-				{/* <Button label="1s" width='15%' onPress={() => {}} />
-				<Button label="10s" width='15%' onPress={() => {}} />
-				<Button label="30s" width='15%' onPress={() => {}} /> */}
 			</FooterContent>
 
 		</Container>
