@@ -33,7 +33,7 @@ export const GeolocationService = {
                     longitudeDelta: LONGITUDE_DELTA
             }),
             error => reject(error),
-            {enableHighAccuracy: false, timeout: 5000});
+            {enableHighAccuracy: true, timeout: 5000});
         } catch (error) {
             reject(error);
         }        
@@ -42,7 +42,7 @@ export const GeolocationService = {
     follow: (success: (pos: any) => void, error: (error: any) => void) => {
         const watchId = Geolocation.watchPosition(
             success, error,
-            {enableHighAccuracy: false, timeout: 5000, maximumAge: 0}
+            {enableHighAccuracy: true, timeout: 5000, maximumAge: 0}
         ); 
 
         return watchId;
