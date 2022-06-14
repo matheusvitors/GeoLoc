@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Alert } from 'react-native';
+import { Alert, LogBox } from 'react-native';
 import MapView from 'react-native-maps';
 import Button from '../../components/Button';
 import { GeolocationService, INTERVAL } from '../../core/geolocation';
@@ -12,8 +12,8 @@ import BackgroundService from 'react-native-background-actions';
 
 import { Container, ContainerRota, FooterContent, HeaderContent, MessageBox, TextRota, Texto, IconContainer} from './styles';
 
-import { LogBox } from 'react-native';
 import useId from '../../hooks/useId';
+import { KeepAwake } from '../../core/keepAwake';
 
 LogBox.ignoreLogs(['new NativeEventEmitter']); // Ignore log notification by message
 LogBox.ignoreAllLogs(); //Ignore all log notifications
@@ -38,6 +38,7 @@ const Inicio = () => {
 	//TODO: Listar as chamadas e identificar quais foram enviadas
 	//TODO: Pegar matricula de quem ta usando
 	//TODO: Indicar visualmente no message box se a coordenada foi enviadas ou não
+	//TODO: Deixar a tela sempre ligada -> https://www.npmjs.com/package/@sayem""314/react-native-keep-awake
 
 	const pegarPosicaoInicial = async () => {
 
@@ -172,12 +173,14 @@ const Inicio = () => {
 			setRastrear(!rastrear);
 
 			if(rota) {
+				KeepAwake.deactivate();
 				setRota(null);
 				await BackgroundService.stop();
 			} else {
 				const { data } = await Service.novaRota(usuarioId ? usuarioId : '');
 				setRota(data.rota.id);	
 				separador();
+				KeepAwake.activate();
 			}
 			
 		} catch (error) {
@@ -197,6 +200,7 @@ const Inicio = () => {
 
 			if(rota){
 				setRota(null);
+				KeepAwake.deactivate();
 				GeolocationService.stopToFollow(watchId);
 				setWatchId(0);
 				await BackgroundService.stop();
@@ -204,7 +208,8 @@ const Inicio = () => {
 				separador();
 				const { data } = await Service.novaRota(usuarioId ? usuarioId : '');
 				console.log(data);
-				setRota(data.rota.id);	
+				setRota(data.rota.id);
+				KeepAwake.activate();	
 				// seguirPosicao();
 			}
 
